@@ -1,4 +1,4 @@
 <?php
 return [
-    'debug' => true,
+    'debug' => true
 ];

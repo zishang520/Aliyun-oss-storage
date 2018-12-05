@@ -5,9 +5,11 @@
  * Date: 16/5/20
  * Time: 下午8:31
  */
-namespace Jacobcyl\AliOSS\Plugins;
+namespace luoyy\AliOSS\Plugins;
+
 use League\Flysystem\Config;
 use League\Flysystem\Plugin\AbstractPlugin;
+
 class PutRemoteFile extends AbstractPlugin
 {
     /**
@@ -20,7 +22,8 @@ class PutRemoteFile extends AbstractPlugin
         return 'putRemoteFile';
     }
 
-    public function handle($path, $remoteUrl, array $options = []){
+    public function handle($path, $remoteUrl, array $options = [])
+    {
         $config = new Config($options);
         if (method_exists($this->filesystem, 'getConfig')) {
             $config->setFallback($this->filesystem->getConfig());
@@ -29,6 +32,6 @@ class PutRemoteFile extends AbstractPlugin
         //Get file stream from remote url
         $resource = fopen($remoteUrl, 'r');
 
-        return (bool)$this->filesystem->getAdapter()->writeStream($path, $resource, $config);
+        return (bool) $this->filesystem->getAdapter()->writeStream($path, $resource, $config);
     }
 }
