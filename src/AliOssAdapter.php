@@ -163,10 +163,9 @@ class AliOssAdapter extends AbstractAdapter
      */
     public function writeStream($path, $resource, Config $config)
     {
-        $options = $this->getOptions($this->options, $config);
         $contents = stream_get_contents($resource);
 
-        return $this->write($path, $contents, $options);
+        return $this->write($path, $contents, $config);
     }
 
     public function writeFile($path, $filePath, Config $config)
