@@ -1,17 +1,16 @@
 <?php
+
 namespace luoyy\AliOSS;
 
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
+use League\Flysystem\Filesystem;
 use luoyy\AliOSS\Plugins\PutFile;
 use luoyy\AliOSS\Plugins\PutRemoteFile;
-use League\Flysystem\Filesystem;
 use OSS\OssClient;
 
 class AliOssServiceProvider extends ServiceProvider
 {
-
     /**
      * Bootstrap the application services.
      *
@@ -19,16 +18,7 @@ class AliOssServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //发布配置文件
-        /*
-        if (function_exists('config_path')) {
-        $this->publishes([
-        __DIR__ . '/config/config.php' => config_path('alioss.php'),
-        ], 'config');
-        }
-         */
-
-        Storage::extend('oss', function ($app, $config) {
+        $this->app['filesystem']->extend('oss', function ($app, $config) {
             $accessId = $config['access_id'];
             $accessKey = $config['access_key'];
 
@@ -45,8 +35,10 @@ class AliOssServiceProvider extends ServiceProvider
                 Log::debug('OSS config:', $config);
             }
 
+            $hostname = $isCname ? $cdnDomain : $endPoint;
+
             $client = new OssClient($accessId, $accessKey, $epInternal, $isCname ? empty($config['endpoint_internal']) : false);
-            $adapter = new AliOssAdapter($client, $bucket, $endPoint, $ssl, $isCname, $debug, $cdnDomain);
+            $adapter = new AliOssAdapter($client, $bucket, $hostname, $ssl, $isCname, $epInternal, $debug);
 
             //Log::debug($client);
             $filesystem = new Filesystem($adapter);

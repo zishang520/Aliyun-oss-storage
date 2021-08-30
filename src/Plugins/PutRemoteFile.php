@@ -3,8 +3,9 @@
  * Created by jacob.
  * User: jacob
  * Date: 16/5/20
- * Time: 下午8:31
+ * Time: 下午8:31.
  */
+
 namespace luoyy\AliOSS\Plugins;
 
 use League\Flysystem\Config;

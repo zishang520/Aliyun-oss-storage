@@ -33,11 +33,11 @@ Add the following in app/filesystems.php:
             'access_id'     => '<Your Aliyun OSS AccessKeyId>',
             'access_key'    => '<Your Aliyun OSS AccessKeySecret>',
             'bucket'        => '<OSS bucket name>',
-            'endpoint'      => '<the endpoint of OSS, E.g: oss-cn-hangzhou.aliyuncs.com | custom domain, E.g:img.abc.com>', // OSS 外网节点或自定义外部域名
+            'endpoint'      => '<the endpoint of OSS, E.g: oss-cn-hangzhou.aliyuncs.com | custom domain, E.g:img.abc.com>', // OSS 外网节点或自定义外部域名
             //'endpoint_internal' => '<internal endpoint [OSS内网节点] 如：oss-cn-shenzhen-internal.aliyuncs.com>', // v2.0.4 新增配置属性，如果为空，则默认使用 endpoint 配置(如果有cName则使用cName)
             'cdnDomain'     => '<CDN domain, cdn域名>', // 如果cdnDomain未设置，则使用endpoint来生成url，否则使用cdn
-            'ssl'           => <true|false> // true to use 'https://' and false to use 'http://'. default is false,
-            'debug'         => <true|false>
+            'ssl'           => <true|false> // true to use 'https://' and false to use 'http://'. default is false,
+            'debug'         => <true|false>
     ],
     ...
 ]
@@ -95,6 +95,7 @@ Storage::deleteDirectory($directory); // Recursively delete a directory.It will 
 Storage::putRemoteFile('target/path/to/file/jacob.jpg', 'http://example.com/jacob.jpg'); //upload remote file to storage by remote url
 // new function for v2.0.1 version
 Storage::url('path/to/img.jpg') // get the file url
+Storage::temporaryUrl('path/to/img.jpg', 900) // Get a temporary URL for the file at the given path.
 ```
 
 ## Documentation

@@ -2,15 +2,15 @@
 /**
  * Created by jacob.
  * Date: 2016/5/19 0019
- * Time: 下午 17:07
+ * Time: 下午 17:07.
  */
 
 namespace luoyy\AliOSS;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
-use League\Flysystem\AdapterInterface;
 use League\Flysystem\Adapter\AbstractAdapter;
+use League\Flysystem\AdapterInterface;
 use League\Flysystem\Config;
 use League\Flysystem\Util;
 use OSS\Core\OssException;
@@ -19,10 +19,6 @@ use OSS\OssClient;
 class AliOssAdapter extends AbstractAdapter
 {
     /**
-     * @var Log debug Mode true|false
-     */
-    protected $debug;
-    /**
      * @var array
      */
     protected static $resultMap = [
@@ -30,7 +26,7 @@ class AliOssAdapter extends AbstractAdapter
         'Content-Length' => 'size',
         'ContentType' => 'mimetype',
         'Size' => 'size',
-        'StorageClass' => 'storage_class'
+        'StorageClass' => 'storage_class',
     ];
 
     /**
@@ -45,7 +41,7 @@ class AliOssAdapter extends AbstractAdapter
         'ContentType',
         'ContentDisposition',
         'ContentLanguage',
-        'ContentEncoding'
+        'ContentEncoding',
     ];
 
     protected static $metaMap = [
@@ -57,60 +53,53 @@ class AliOssAdapter extends AbstractAdapter
         'ContentType' => 'Content-Type',
         'ContentDisposition' => 'Content-Disposition',
         'ContentLanguage' => 'response-content-language',
-        'ContentEncoding' => 'Content-Encoding'
+        'ContentEncoding' => 'Content-Encoding',
     ];
 
     //Aliyun OSS Client OssClient
     protected $client;
+
     //bucket name
     protected $bucket;
 
-    protected $endPoint;
-
-    protected $cdnDomain;
-
-    protected $url;
+    protected $hostname;
 
     protected $ssl;
 
     protected $isCname;
 
+    protected $epInternal;
+
+    /**
+     * @var Log debug Mode true|false
+     */
+    protected $debug;
+
     //配置
     protected $options = [
-        'Multipart' => 128
+        'Multipart' => 128,
     ];
 
     /**
      * AliOssAdapter constructor.
      *
-     * @param OssClient $client
-     * @param string    $bucket
-     * @param string    $endPoint
-     * @param bool      $ssl
-     * @param bool      $isCname
-     * @param bool      $debug
-     * @param null      $prefix
-     * @param array     $options
+     * @param string $bucket
+     * @param string $hostname
+     * @param bool $ssl
+     * @param bool $isCname
+     * @param bool $debug
+     * @param string|null $prefix
      */
-    public function __construct(
-        OssClient $client,
-                  $bucket,
-                  $endPoint,
-                  $ssl,
-                  $isCname = false,
-                  $debug = false,
-                  $cdnDomain = false,
-                  $prefix = null,
-        array     $options = []
-    ) {
-        $this->debug = $debug;
+    public function __construct(OssClient $client, $bucket, $hostname, $ssl, $isCname, $epInternal, $debug = false, $prefix = null, array $options = [])
+    {
         $this->client = $client;
         $this->bucket = $bucket;
-        $this->setPathPrefix($prefix);
-        $this->endPoint = $endPoint;
+        $this->hostname = $hostname;
         $this->ssl = $ssl;
         $this->isCname = $isCname;
-        $this->cdnDomain = $cdnDomain;
+        $this->epInternal = $epInternal;
+        $this->debug = $debug;
+        $this->setPathPrefix($prefix);
         $this->options = array_merge($this->options, $options);
     }
 
@@ -177,7 +166,7 @@ class AliOssAdapter extends AbstractAdapter
         $options = $this->getOptions($this->options, $config);
         $contents = stream_get_contents($resource);
 
-        return $this->write($path, $contents, $config);
+        return $this->write($path, $contents, $options);
     }
 
     public function writeFile($path, $filePath, Config $config)
@@ -288,7 +277,6 @@ class AliOssAdapter extends AbstractAdapter
         $dirObjects = $this->listDirObjects($dirname, true);
 
         if (count($dirObjects['objects']) > 0) {
-
             foreach ($dirObjects['objects'] as $object) {
                 $objects[] = $object['Key'];
             }
@@ -299,7 +287,6 @@ class AliOssAdapter extends AbstractAdapter
                 $this->logErr(__FUNCTION__, $e);
                 return false;
             }
-
         }
 
         try {
@@ -313,7 +300,7 @@ class AliOssAdapter extends AbstractAdapter
     }
 
     /**
-     * 列举文件夹内文件列表；可递归获取子文件夹；
+     * 列举文件夹内文件列表；可递归获取子文件夹.
      * @param string $dirname 目录
      * @param bool $recursive 是否递归
      * @return mixed
@@ -333,7 +320,7 @@ class AliOssAdapter extends AbstractAdapter
                 'delimiter' => $delimiter,
                 'prefix' => $dirname,
                 'max-keys' => $maxkeys,
-                'marker' => $nextMarker
+                'marker' => $nextMarker,
             ];
 
             try {
@@ -350,7 +337,6 @@ class AliOssAdapter extends AbstractAdapter
 
             if (!empty($objectList)) {
                 foreach ($objectList as $objectInfo) {
-
                     $object['Prefix'] = $dirname;
                     $object['Key'] = $objectInfo->getKey();
                     $object['LastModified'] = $objectInfo->getLastModified();
@@ -362,7 +348,7 @@ class AliOssAdapter extends AbstractAdapter
                     $result['objects'][] = $object;
                 }
             } else {
-                $result["objects"] = [];
+                $result['objects'] = [];
             }
 
             if (!empty($prefixList)) {
@@ -377,7 +363,7 @@ class AliOssAdapter extends AbstractAdapter
             if ($recursive) {
                 foreach ($result['prefix'] as $pfix) {
                     $next = $this->listDirObjects($pfix, $recursive);
-                    $result["objects"] = array_merge($result['objects'], $next["objects"]);
+                    $result['objects'] = array_merge($result['objects'], $next['objects']);
                 }
             }
 
@@ -463,28 +449,12 @@ class AliOssAdapter extends AbstractAdapter
     }
 
     /**
-     * Read an object from the OssClient.
-     *
-     * @param string $path
-     *
-     * @return array
-     */
-    protected function readObject($path)
-    {
-        $object = $this->applyPathPrefix($path);
-
-        $result['Body'] = $this->client->getObject($this->bucket, $object);
-        $result = array_merge($result, ['type' => 'file']);
-        return $this->normalizeResponse($result, $path);
-    }
-
-    /**
      * {@inheritdoc}
      */
     public function listContents($directory = '', $recursive = false)
     {
-        $dirObjects = $this->listDirObjects($directory, true);
-        $contents = $dirObjects["objects"];
+        $dirObjects = $this->listDirObjects($directory, $recursive);
+        $contents = $dirObjects['objects'];
 
         $result = array_map([$this, 'normalizeResponse'], $contents);
         $result = array_filter($result, function ($value) {
@@ -574,29 +544,46 @@ class AliOssAdapter extends AbstractAdapter
      */
     public function getUrl($path)
     {
-        return ($this->ssl ? 'https://' : 'http://') . ($this->isCname ? ($this->cdnDomain == '' ? $this->endPoint : $this->cdnDomain) : $this->bucket . '.' . $this->endPoint) . '/' . ltrim($path, '/');
+        $object = $this->applyPathPrefix($path);
+
+        return ($this->ssl ? 'https://' : 'http://') . ($this->isCname ? $this->hostname : $this->bucket . '.' . $this->hostname) . '/' . ltrim($object, '/');
     }
 
     /**
-     * [getTemporaryUrl 获取临时地址]
-     * @Author    ZiShang520@gmail.com
-     * @DateTime  2018-12-05T17:46:39+0800
-     * @copyright (c) ZiShang520 All Rights Reserved
-     * @param     [type] $path [description]
-     * @param     [type] $expiration [description]
-     * @param     array $options [description]
-     * @return    [type] [description]
+     * 获取临时地址.
+     * @copyright (c) zishang520 All Rights Reserved
+     * @param string $path
+     * @param \Carbon\CarbonInterface|\DateTimeInterface|string|int|null $date $expiration
+     * @return string
      */
     public function getTemporaryUrl($path, $expiration, array $options = [])
     {
-        return $this->client->signUrl($this->bucket, $path, Carbon::now()->diffInSeconds($expiration), $options['method'] ?? 'GET', $options);
+        $object = $this->applyPathPrefix($path);
+
+        return $this->client->signUrl($this->bucket, $object, !is_null($expiration) ? (is_integer($expiration) ? $expiration : Carbon::now()->diffInSeconds(Carbon::parse($expiration))) : 60, $options[OssClient::OSS_METHOD] ?? OssClient::OSS_HTTP_GET, $options);
+    }
+
+    /**
+     * Read an object from the OssClient.
+     *
+     * @param string $path
+     *
+     * @return array
+     */
+    protected function readObject($path)
+    {
+        $object = $this->applyPathPrefix($path);
+
+        $result['Body'] = $this->client->getObject($this->bucket, $object);
+        $result = array_merge($result, ['type' => 'file']);
+        return $this->normalizeResponse($result, $path);
     }
 
     /**
      * Concatenate a path to a URL.
      *
-     * @param  string $url
-     * @param  string $path
+     * @param string $url
+     * @param string $path
      * @return string
      */
     protected function concatPathToUrl($url, $path)
@@ -621,7 +608,6 @@ class AliOssAdapter extends AbstractAdapter
     /**
      * Normalize a result from OSS.
      *
-     * @param array  $object
      * @param string $path
      *
      * @return array file metadata
@@ -648,9 +634,7 @@ class AliOssAdapter extends AbstractAdapter
     }
 
     /**
-     * Get options for a OSS call. done
-     *
-     * @param array  $options
+     * Get options for a OSS call. done.
      *
      * @return array OSS options
      */
@@ -662,13 +646,11 @@ class AliOssAdapter extends AbstractAdapter
             $options = array_merge($options, $this->getOptionsFromConfig($config));
         }
 
-        return array(OssClient::OSS_HEADERS => $options);
+        return [OssClient::OSS_HEADERS => $options];
     }
 
     /**
-     * Retrieve options from a Config instance. done
-     *
-     * @param Config $config
+     * Retrieve options from a Config instance. done.
      *
      * @return array
      */
@@ -707,7 +689,7 @@ class AliOssAdapter extends AbstractAdapter
     protected function logErr($fun, $e)
     {
         if ($this->debug) {
-            Log::error($fun . ": FAILED");
+            Log::error($fun . ': FAILED');
             Log::error($e->getMessage());
         }
     }
