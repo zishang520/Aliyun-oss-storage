@@ -560,7 +560,11 @@ class AliOssAdapter extends AbstractAdapter
     {
         $object = $this->applyPathPrefix($path);
 
-        return $this->client->signUrl($this->bucket, $object, !is_null($expiration) ? (is_integer($expiration) ? $expiration : Carbon::now()->diffInSeconds(Carbon::parse($expiration))) : 60, $options[OssClient::OSS_METHOD] ?? OssClient::OSS_HTTP_GET, $options);
+        $url = $this->client->signUrl($this->bucket, $object, !is_null($expiration) ? (is_integer($expiration) ? $expiration : Carbon::now()->diffInSeconds(Carbon::parse($expiration))) : 60, $options[OssClient::OSS_METHOD] ?? OssClient::OSS_HTTP_GET, $options);
+        if ($this->epInternal == $this->hostname) {
+            return $url;
+        }
+        return preg_replace(sprintf('/%s/', preg_quote($this->bucket . '.' . $this->epInternal)), ($this->isCname ? $this->hostname : $this->bucket . '.' . $this->hostname), $url, 1);
     }
 
     /**
