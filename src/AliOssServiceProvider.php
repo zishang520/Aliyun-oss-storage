@@ -38,6 +38,7 @@ class AliOssServiceProvider extends ServiceProvider
             $hostname = $isCname ? $cdnDomain : $endPoint;
 
             $client = new OssClient($accessId, $accessKey, $epInternal, $isCname ? empty($config['endpoint_internal']) : false);
+            $client->setUseSSL($ssl);
             $adapter = new AliOssAdapter($client, $bucket, $hostname, $ssl, $isCname, $epInternal, $debug, $config['prefix'] ?? null);
 
             //Log::debug($client);
