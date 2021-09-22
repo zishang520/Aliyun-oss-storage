@@ -267,6 +267,21 @@ class AliOssAdapter extends AbstractAdapter
         return !$this->has($path);
     }
 
+    public function symlink($symlink, $path, Config $config)
+    {
+        $object = $this->applyPathPrefix($path);
+        $symlink = $this->applyPathPrefix($symlink);
+        $options = $this->getOptions($this->options, $config);
+
+        try {
+            $this->client->putSymlink($this->bucket, $symlink, $object);
+        } catch (OssException $e) {
+            $this->logErr(__FUNCTION__, $e);
+            return false;
+        }
+        return $this->normalizeResponse($options, $path);
+    }
+
     /**
      * {@inheritdoc}
      */

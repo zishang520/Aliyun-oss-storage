@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use League\Flysystem\Filesystem;
 use luoyy\AliOSS\Plugins\PutFile;
 use luoyy\AliOSS\Plugins\PutRemoteFile;
+use luoyy\AliOSS\Plugins\Symlink;
 use OSS\OssClient;
 
 class AliOssServiceProvider extends ServiceProvider
@@ -46,6 +47,7 @@ class AliOssServiceProvider extends ServiceProvider
 
             $filesystem->addPlugin(new PutFile());
             $filesystem->addPlugin(new PutRemoteFile());
+            $filesystem->addPlugin(new Symlink());
             //$filesystem->addPlugin(new CallBack());
             return $filesystem;
         });
