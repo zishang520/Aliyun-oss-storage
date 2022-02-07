@@ -2,6 +2,7 @@
 
 namespace luoyy\AliOSS;
 
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use League\Flysystem\Filesystem;
@@ -43,13 +44,14 @@ class AliOssServiceProvider extends ServiceProvider
             $adapter = new AliOssAdapter($client, $bucket, $hostname, $ssl, $isCname, $epInternal, $debug, $config['prefix'] ?? null);
 
             //Log::debug($client);
-            $filesystem = new Filesystem($adapter);
+            $filesystem = new Filesystem($adapter, $config);
 
             $filesystem->addPlugin(new PutFile());
             $filesystem->addPlugin(new PutRemoteFile());
             $filesystem->addPlugin(new Symlink());
             //$filesystem->addPlugin(new CallBack());
-            return $filesystem;
+
+            return new FilesystemAdapter($filesystem, $adapter, $config);
         });
     }
 
