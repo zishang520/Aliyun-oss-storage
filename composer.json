@@ -9,6 +9,7 @@
         "email": "zishang520@gmail.com"
     }],
     "require": {
+        "laravel/framework": "^9.0",
         "aliyuncs/oss-sdk-php": "~2.0",
         "nesbot/carbon": "^2.1"
     },
