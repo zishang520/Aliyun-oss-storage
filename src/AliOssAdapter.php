@@ -14,7 +14,6 @@ use League\Flysystem\Config;
 use League\Flysystem\DirectoryAttributes;
 use League\Flysystem\FileAttributes;
 use League\Flysystem\FilesystemAdapter;
-use League\Flysystem\FilesystemOperationFailed;
 use League\Flysystem\PathPrefixer;
 use League\Flysystem\StorageAttributes;
 use League\Flysystem\UnableToCheckExistence;
@@ -326,7 +325,7 @@ class AliOssAdapter implements FilesystemAdapter
         try {
             $this->copy($source, $destination, $config);
             $this->delete($source);
-        } catch (FilesystemOperationFailed $exception) {
+        } catch (Throwable $exception) {
             throw UnableToMoveFile::fromLocationTo($source, $destination, $exception);
         }
     }
@@ -355,31 +354,14 @@ class AliOssAdapter implements FilesystemAdapter
         }
     }
 
-    /**
-     * Get the OssClient bucket.
-     *
-     * @return string
-     */
-    public function getBucket()
-    {
-        return $this->bucket;
-    }
-
-    /**
-     * Get the OSSClient instance.
-     *
-     * @return OssClient
-     */
-    public function getClient()
-    {
-        return $this->client;
-    }
-
-    public function symlink($symlink, $path, Config $config): void
+    public function symlink(string $symlink, string $path, Config $config): void
     {
         try {
             $this->client->putSymlink($this->bucket, $this->prefixer->prefixPath($symlink), $this->prefixer->prefixPath($path), $this->getOptions($this->options, $config));
-        } catch (OssException $e) {
+        } catch (OssException $exception) {
+            throw UnableToWriteFile::atLocation($path, $exception->getErrorMessage(), $exception);
+        } catch (Throwable $exception) {
+            throw UnableToWriteFile::atLocation($path, 'Unknown', $exception);
         }
     }
 
@@ -402,7 +384,7 @@ class AliOssAdapter implements FilesystemAdapter
      */
     public function getTemporaryUrl($path, $expiration, array $options = [])
     {
-        $url = $this->client->signUrl($this->bucket, $this->prefixer->prefixPath($path), !is_null($expiration) ? (is_integer($expiration) ? $expiration : Carbon::now()->diffInSeconds(Carbon::parse($expiration))) : 60, $options[OssClient::OSS_METHOD] ?? OssClient::OSS_HTTP_GET, $options);
+        $url = $this->client->signUrl($this->bucket, $this->prefixer->prefixPath($path), !is_null($expiration) ? (is_integer($expiration) ? $expiration : Carbon::now()->diffInSeconds(Carbon::parse($expiration))) : 60, $options[OssClient::OSS_METHOD] ?? OssClient::OSS_HTTP_GET, $options + $this->options);
         if ($this->epInternal == $this->hostname) {
             return $url;
         }
