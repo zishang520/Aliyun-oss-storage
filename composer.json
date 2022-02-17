@@ -1,6 +1,6 @@
 {
     "name": "luoyy/ali-oss-storage",
-    "description": "aliyun oss filesystem storage for laravel 5+",
+    "description": "aliyun oss filesystem storage for laravel 9+",
     "keywords": ["aliyun", "oss", "laravel", "filesystems", "storage"],
     "homepage": "https://github.com/zishang520/Aliyun-oss-storage",
     "license": "MIT",
