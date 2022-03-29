@@ -54,6 +54,6 @@ class AliOssServiceProvider extends ServiceProvider
      */
     protected function setupConfig()
     {
-        $this->mergeConfigFrom(realpath(__DIR__ . '/../config/config.php'), 'filesystems.disks.oss');
+        $this->mergeConfigFrom(realpath(__DIR__ . '/../../config/config.php'), 'filesystems.disks.oss');
     }
 }
