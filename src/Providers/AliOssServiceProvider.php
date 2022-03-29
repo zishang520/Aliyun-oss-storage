@@ -6,6 +6,7 @@ use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\ServiceProvider;
 use League\Flysystem\Config;
 use League\Flysystem\Filesystem;
+use luoyy\AliOSS\AliOssAdapter;
 use OSS\OssClient;
 
 class AliOssServiceProvider extends ServiceProvider
