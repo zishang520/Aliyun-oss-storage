@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace luoyy\AliOSS;
+namespace luoyy\AliOSS\Contracts;
 
 use League\Flysystem\Visibility;
 use OSS\OssClient;

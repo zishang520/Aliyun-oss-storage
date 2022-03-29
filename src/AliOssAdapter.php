@@ -9,6 +9,7 @@
 namespace luoyy\AliOSS;
 
 use Carbon\Carbon;
+use DateTimeInterface;
 use Generator;
 use League\Flysystem\Config;
 use League\Flysystem\DirectoryAttributes;
@@ -26,6 +27,8 @@ use League\Flysystem\UnableToSetVisibility;
 use League\Flysystem\UnableToWriteFile;
 use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use League\MimeTypeDetection\MimeTypeDetector;
+use luoyy\AliOSS\Contracts\PortableVisibilityConverter;
+use luoyy\AliOSS\Contracts\VisibilityConverter;
 use OSS\Core\OssException;
 use OSS\OssClient;
 use Throwable;
@@ -107,6 +110,8 @@ class AliOssAdapter implements FilesystemAdapter
 
     private VisibilityConverter $visibility;
 
+    private string $domain;
+
     /**
      * AliOssAdapter constructor.
      */
@@ -118,8 +123,8 @@ class AliOssAdapter implements FilesystemAdapter
         bool $isCname,
         string $epInternal,
         string $prefix = '',
-        VisibilityConverter $visibility = null,
-        MimeTypeDetector $mimeTypeDetector = null,
+        ?VisibilityConverter $visibility = null,
+        ?MimeTypeDetector $mimeTypeDetector = null,
         array $options = []
     ) {
         $this->client = $client;
@@ -132,6 +137,7 @@ class AliOssAdapter implements FilesystemAdapter
         $this->visibility = $visibility ?: new PortableVisibilityConverter();
         $this->mimeTypeDetector = $mimeTypeDetector ?: new FinfoMimeTypeDetector();
         $this->options = array_merge($this->options, $options);
+        $this->domain = $this->isCname ? $this->hostname : $this->bucket . '.' . $this->hostname;
     }
 
     public function fileExists(string $path): bool
@@ -365,30 +371,22 @@ class AliOssAdapter implements FilesystemAdapter
         }
     }
 
-    /**
-     * @param $path
-     *
-     * @return string
-     */
-    public function getUrl($path)
+    public function getUrl(string $path): string
     {
-        return ($this->ssl ? 'https://' : 'http://') . ($this->isCname ? $this->hostname : $this->bucket . '.' . $this->hostname) . '/' . ltrim($this->prefixer->prefixPath($path), '/');
+        return ($this->ssl ? 'https://' : 'http://') . $this->domain . '/' . ltrim($this->prefixer->prefixPath($path), '/');
     }
 
     /**
      * 获取临时地址.
      * @copyright (c) zishang520 All Rights Reserved
-     * @param string $path
-     * @param \Carbon\CarbonInterface|\DateTimeInterface|string|int|null $date $expiration
-     * @return string
      */
-    public function getTemporaryUrl($path, $expiration, array $options = [])
+    public function getTemporaryUrl(string $path, DateTimeInterface $expiration, array $options = []): string
     {
-        $url = $this->client->signUrl($this->bucket, $this->prefixer->prefixPath($path), !is_null($expiration) ? (is_integer($expiration) ? $expiration : Carbon::now()->diffInSeconds(Carbon::parse($expiration))) : 60, $options[OssClient::OSS_METHOD] ?? OssClient::OSS_HTTP_GET, $options + $this->options);
+        $url = $this->client->signUrl($this->bucket, $this->prefixer->prefixPath($path), Carbon::now()->diffInSeconds(Carbon::parse($expiration)), $options[OssClient::OSS_METHOD] ?? OssClient::OSS_HTTP_GET, $options + $this->options);
         if ($this->epInternal == $this->hostname) {
             return $url;
         }
-        return preg_replace(sprintf('/%s/', preg_quote($this->bucket . '.' . $this->epInternal)), ($this->isCname ? $this->hostname : $this->bucket . '.' . $this->hostname), $url, 1);
+        return preg_replace(sprintf('/%s/', preg_quote($this->bucket . '.' . $this->epInternal)), $this->domain, $url, 1);
     }
 
     /**
@@ -396,7 +394,7 @@ class AliOssAdapter implements FilesystemAdapter
      *
      * @return array OSS options
      */
-    protected function getOptions(array $options = [], Config $config = null)
+    protected function getOptions(array $options = [], Config $config = null): array
     {
         $options = array_merge($this->options, $options);
 
@@ -409,10 +407,8 @@ class AliOssAdapter implements FilesystemAdapter
 
     /**
      * Retrieve options from a Config instance. done.
-     *
-     * @return array
      */
-    protected function getOptionsFromConfig(Config $config)
+    protected function getOptionsFromConfig(Config $config): array
     {
         $options = [];
 
