@@ -10,8 +10,8 @@
     }],
     "require": {
         "php": "^8.0.2",
-        "illuminate/filesystem": "^9.0",
-        "illuminate/support": "^9.0",
+        "illuminate/filesystem": "^9.33",
+        "illuminate/support": "^9.33",
         "league/flysystem": "^3.0.0",
         "aliyuncs/oss-sdk-php": "~2.0",
         "nesbot/carbon": "^2.1"

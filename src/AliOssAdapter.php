@@ -85,10 +85,10 @@ class AliOssAdapter implements FilesystemAdapter
         'x-oss-version-id',
     ];
 
-    //Aliyun OSS Client OssClient
+    // Aliyun OSS Client OssClient
     protected OssClient $client;
 
-    //bucket name
+    // bucket name
     protected string $bucket;
 
     protected string $hostname;
@@ -99,7 +99,7 @@ class AliOssAdapter implements FilesystemAdapter
 
     protected string $epInternal;
 
-    //配置
+    // 配置
     protected $options = [
         'Multipart' => 128,
     ];
@@ -371,9 +371,31 @@ class AliOssAdapter implements FilesystemAdapter
         }
     }
 
+    public function appendFile(string $path, string $file, int $position = 0, Config $config): void
+    {
+        try {
+            $this->client->appendFile($this->bucket, $this->prefixer->prefixPath($path), $file, $position, $this->getOptions($this->options, $config));
+        } catch (OssException $exception) {
+            throw UnableToWriteFile::atLocation($path, $exception->getErrorMessage(), $exception);
+        } catch (Throwable $exception) {
+            throw UnableToWriteFile::atLocation($path, 'Unknown', $exception);
+        }
+    }
+
+    public function appendObject(string $path, string $content, int $position = 0, Config $config): void
+    {
+        try {
+            $this->client->appendObject($this->bucket, $this->prefixer->prefixPath($path), $content, $position, $this->getOptions($this->options, $config));
+        } catch (OssException $exception) {
+            throw UnableToWriteFile::atLocation($path, $exception->getErrorMessage(), $exception);
+        } catch (Throwable $exception) {
+            throw UnableToWriteFile::atLocation($path, 'Unknown', $exception);
+        }
+    }
+
     public function getUrl(string $path): string
     {
-        return ($this->ssl ? 'https://' : 'http://') . $this->domain . '/' . ltrim($this->prefixer->prefixPath($path), '/');
+        return ($this->ssl ? 'https://' : 'http://') . $this->domain . '/' . ltrim($path, '/');
     }
 
     /**
@@ -462,7 +484,7 @@ class AliOssAdapter implements FilesystemAdapter
                 ];
             }
 
-            //没有更多结果了
+            // 没有更多结果了
             if ($listObjectInfo->getIsTruncated() === 'false') {
                 break;
             }
