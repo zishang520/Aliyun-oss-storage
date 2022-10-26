@@ -418,13 +418,23 @@ class AliOssAdapter implements FilesystemAdapter
      */
     protected function getOptions(array $options = [], Config $config = null): array
     {
-        $options = array_merge($this->options, $options);
+        $headers = array_merge($this->options, $options);
 
         if ($config) {
-            $options = array_merge($options, $this->getOptionsFromConfig($config));
+            $headers = array_merge($headers, $this->getOptionsFromConfig($config));
         }
 
-        return [OssClient::OSS_HEADERS => $options];
+        $options = [
+            OssClient::OSS_HEADERS => $headers,
+        ];
+
+        foreach ([OssClient::OSS_LENGTH, OssClient::OSS_CONTENT_TYPE, OssClient::OSS_CONTENT_LENGTH, OssClient::OSS_UPLOAD_ID, OssClient::OSS_PART_SIZE] as $key) {
+            if ($value = $config->get($key)) {
+                $options[$key] = $value;
+            }
+        }
+
+        return $options;
     }
 
     /**
