@@ -371,7 +371,7 @@ class AliOssAdapter implements FilesystemAdapter
         }
     }
 
-    public function appendFile(string $path, string $file, int $position = 0, Config $config): void
+    public function appendFile(string $path, string $file, int $position, Config $config): void
     {
         try {
             $this->client->appendFile($this->bucket, $this->prefixer->prefixPath($path), $file, $position, $this->getOptions($this->options, $config));
@@ -382,7 +382,7 @@ class AliOssAdapter implements FilesystemAdapter
         }
     }
 
-    public function appendObject(string $path, string $content, int $position = 0, Config $config): void
+    public function appendObject(string $path, string $content, int $position, Config $config): void
     {
         try {
             $this->client->appendObject($this->bucket, $this->prefixer->prefixPath($path), $content, $position, $this->getOptions($this->options, $config));
