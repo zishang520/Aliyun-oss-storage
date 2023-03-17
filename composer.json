@@ -9,12 +9,12 @@
         "email": "zishang520@gmail.com"
     }],
     "require": {
-        "php": "^8.0.2",
-        "illuminate/filesystem": "^9.33",
-        "illuminate/support": "^9.33",
-        "league/flysystem": "^3.0.0",
+        "php": "^8.1",
+        "illuminate/filesystem": "^10.0",
+        "illuminate/support": "^10.0",
+        "league/flysystem": "^3.8.0",
         "aliyuncs/oss-sdk-php": "~2.0",
-        "nesbot/carbon": "^2.1"
+        "nesbot/carbon": "^2.62.1",
     },
     "autoload": {
         "psr-4": {
