@@ -9,17 +9,22 @@
 namespace luoyy\AliOSS;
 
 use Carbon\Carbon;
-use DateTimeInterface;
-use Generator;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use League\Flysystem\Config;
 use League\Flysystem\DirectoryAttributes;
 use League\Flysystem\FileAttributes;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\PathPrefixer;
 use League\Flysystem\StorageAttributes;
+use League\Flysystem\UnableToCheckDirectoryExistence;
 use League\Flysystem\UnableToCheckExistence;
 use League\Flysystem\UnableToCopyFile;
+use League\Flysystem\UnableToCreateDirectory;
 use League\Flysystem\UnableToDeleteFile;
+use League\Flysystem\UnableToGeneratePublicUrl;
+use League\Flysystem\UnableToGenerateTemporaryUrl;
+use League\Flysystem\UnableToListContents;
 use League\Flysystem\UnableToMoveFile;
 use League\Flysystem\UnableToReadFile;
 use League\Flysystem\UnableToRetrieveMetadata;
@@ -31,7 +36,6 @@ use luoyy\AliOSS\Contracts\PortableVisibilityConverter;
 use luoyy\AliOSS\Contracts\VisibilityConverter;
 use OSS\Core\OssException;
 use OSS\OssClient;
-use Throwable;
 
 class AliOssAdapter implements FilesystemAdapter
 {
@@ -144,7 +148,7 @@ class AliOssAdapter implements FilesystemAdapter
     {
         try {
             return $this->client->doesObjectExist($this->bucket, $this->prefixer->prefixPath($path), $this->options);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToCheckExistence::forLocation($path, $exception);
         }
     }
@@ -162,8 +166,8 @@ class AliOssAdapter implements FilesystemAdapter
             $listObjectInfo = $this->client->listObjects($this->bucket, $options + $this->options);
 
             return !empty($listObjectInfo->getObjectList());
-        } catch (Throwable $exception) {
-            throw UnableToCheckExistence::forLocation($path, $exception);
+        } catch (\Throwable $exception) {
+            throw UnableToCheckDirectoryExistence::forLocation($path, $exception);
         }
     }
 
@@ -183,25 +187,24 @@ class AliOssAdapter implements FilesystemAdapter
             return $this->client->getObject($this->bucket, $this->prefixer->prefixPath($path), $this->options);
         } catch (OssException $exception) {
             throw UnableToReadFile::fromLocation($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $e) {
-            UnableToReadFile::fromLocation($path, '', $e);
+        } catch (\Throwable $e) {
+            throw UnableToReadFile::fromLocation($path, '', $e);
         }
     }
 
     public function readStream(string $path)
     {
         try {
-            $result = $this->client->getObject($this->bucket, $this->prefixer->prefixPath($path), $this->options);
-            $stream = fopen('php://temp', 'r+');
-            fwrite($stream, $result);
-            rewind($stream);
-            unset($result);
+            $client = new Client();
+            $response = $client->request('GET', $this->client->signUrl($this->bucket, $this->prefixer->prefixPath($path), 3660 * 24 * 180, OssClient::OSS_HTTP_GET, $this->options));
 
-            return $stream;
+            return $response->getBody()->detach();
+        } catch (GuzzleException $exception) {
+            throw UnableToReadFile::fromLocation($path, $exception->getMessage(), $exception);
         } catch (OssException $exception) {
             throw UnableToReadFile::fromLocation($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $e) {
-            UnableToReadFile::fromLocation($path, '', $e);
+        } catch (\Throwable $e) {
+            throw UnableToReadFile::fromLocation($path, '', $e);
         }
     }
 
@@ -211,7 +214,7 @@ class AliOssAdapter implements FilesystemAdapter
             $this->client->deleteObject($this->bucket, $this->prefixer->prefixPath($path), $this->options);
         } catch (OssException $exception) {
             throw UnableToDeleteFile::atLocation($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToDeleteFile::atLocation($path, '', $exception);
         }
     }
@@ -237,14 +240,20 @@ class AliOssAdapter implements FilesystemAdapter
             $this->client->deleteObjects($this->bucket, $dels);
         } catch (OssException $exception) {
             throw UnableToDeleteFile::atLocation($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToDeleteFile::atLocation($path, '', $exception);
         }
     }
 
     public function createDirectory(string $path, Config $config): void
     {
-        $this->client->createObjectDir($this->bucket, $this->prefixer->prefixPath($path), $this->options + $this->getOptionsFromConfig($config));
+        try {
+            $this->client->createObjectDir($this->bucket, $this->prefixer->prefixPath($path), $this->options + $this->getOptionsFromConfig($config));
+        } catch (OssException $exception) {
+            throw UnableToCreateDirectory::atLocation($path, $exception->getErrorMessage(), $exception);
+        } catch (\Throwable $exception) {
+            throw UnableToCreateDirectory::atLocation($path, 'Unknown', $exception);
+        }
     }
 
     public function setVisibility(string $path, string $visibility): void
@@ -253,7 +262,7 @@ class AliOssAdapter implements FilesystemAdapter
             $this->client->putObjectAcl($this->bucket, $this->prefixer->prefixPath($path), $this->visibility->visibilityToAcl($visibility), $this->options);
         } catch (OssException $exception) {
             throw UnableToSetVisibility::atLocation($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToSetVisibility::atLocation($path, '', $exception);
         }
     }
@@ -264,7 +273,7 @@ class AliOssAdapter implements FilesystemAdapter
             $acl = $this->client->getObjectAcl($this->bucket, $this->prefixer->prefixPath($path), $this->options);
         } catch (OssException $exception) {
             throw UnableToRetrieveMetadata::visibility($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToRetrieveMetadata::visibility($path, '', $exception);
         }
 
@@ -321,8 +330,12 @@ class AliOssAdapter implements FilesystemAdapter
         }
         $listing = $this->retrievePaginatedListing($options);
 
-        foreach ($listing as $item) {
-            yield $this->mapOssObjectMetadata((array) $item);
+        try {
+            foreach ($listing as $item) {
+                yield $this->mapOssObjectMetadata((array) $item);
+            }
+        } catch (\Throwable $exception) {
+            throw UnableToListContents::atLocation($path, $deep, $exception);
         }
     }
 
@@ -331,7 +344,7 @@ class AliOssAdapter implements FilesystemAdapter
         try {
             $this->copy($source, $destination, $config);
             $this->delete($source);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToMoveFile::fromLocationTo($source, $destination, $exception);
         }
     }
@@ -341,7 +354,7 @@ class AliOssAdapter implements FilesystemAdapter
         try {
             /** @var string $visibility */
             $visibility = $this->visibility($source)->visibility();
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToCopyFile::fromLocationTo($source, $destination, $exception);
         }
 
@@ -355,7 +368,7 @@ class AliOssAdapter implements FilesystemAdapter
                 $this->prefixer->prefixPath($destination),
                 $options
             );
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToCopyFile::fromLocationTo($source, $destination, $exception);
         }
     }
@@ -366,7 +379,7 @@ class AliOssAdapter implements FilesystemAdapter
             $this->client->putSymlink($this->bucket, $this->prefixer->prefixPath($symlink), $this->prefixer->prefixPath($path), $this->getOptions($this->options, $config));
         } catch (OssException $exception) {
             throw UnableToWriteFile::atLocation($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToWriteFile::atLocation($path, 'Unknown', $exception);
         }
     }
@@ -377,7 +390,7 @@ class AliOssAdapter implements FilesystemAdapter
             $this->client->appendFile($this->bucket, $this->prefixer->prefixPath($path), $file, $position, $this->getOptions($this->options, $config));
         } catch (OssException $exception) {
             throw UnableToWriteFile::atLocation($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToWriteFile::atLocation($path, 'Unknown', $exception);
         }
     }
@@ -388,27 +401,35 @@ class AliOssAdapter implements FilesystemAdapter
             $this->client->appendObject($this->bucket, $this->prefixer->prefixPath($path), $content, $position, $this->getOptions($this->options, $config));
         } catch (OssException $exception) {
             throw UnableToWriteFile::atLocation($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToWriteFile::atLocation($path, 'Unknown', $exception);
         }
     }
 
     public function getUrl(string $path): string
     {
-        return ($this->ssl ? 'https://' : 'http://') . $this->domain . '/' . ltrim($path, '/');
+        try {
+            return ($this->ssl ? 'https://' : 'http://') . $this->domain . '/' . ltrim($path, '/');
+        } catch (\Throwable $exception) {
+            throw UnableToGeneratePublicUrl::dueToError($path, $exception);
+        }
     }
 
     /**
      * 获取临时地址.
      * @copyright (c) zishang520 All Rights Reserved
      */
-    public function getTemporaryUrl(string $path, DateTimeInterface $expiration, array $options = []): string
+    public function getTemporaryUrl(string $path, \DateTimeInterface $expiration, array $options = []): string
     {
-        $url = $this->client->signUrl($this->bucket, $this->prefixer->prefixPath($path), Carbon::now()->diffInSeconds(Carbon::parse($expiration)), $options[OssClient::OSS_METHOD] ?? OssClient::OSS_HTTP_GET, $options + $this->options);
-        if ($this->epInternal == $this->hostname) {
-            return $url;
+        try {
+            $url = $this->client->signUrl($this->bucket, $this->prefixer->prefixPath($path), Carbon::now()->diffInSeconds(Carbon::parse($expiration)), $options[OssClient::OSS_METHOD] ?? OssClient::OSS_HTTP_GET, $options + $this->options);
+            if ($this->epInternal == $this->hostname) {
+                return $url;
+            }
+            return preg_replace(sprintf('/%s/', preg_quote($this->bucket . '.' . $this->epInternal)), $this->domain, $url, 1);
+        } catch (\Throwable $exception) {
+            throw UnableToGenerateTemporaryUrl::dueToError($path, $exception);
         }
-        return preg_replace(sprintf('/%s/', preg_quote($this->bucket . '.' . $this->epInternal)), $this->domain, $url, 1);
     }
 
     /**
@@ -469,7 +490,7 @@ class AliOssAdapter implements FilesystemAdapter
         return $options;
     }
 
-    private function retrievePaginatedListing(array $options, bool $recursive = false): Generator
+    private function retrievePaginatedListing(array $options, bool $recursive = false): \Generator
     {
         while (true) {
             $listObjectInfo = $this->client->listObjects($this->bucket, $options + $this->options);
@@ -484,14 +505,23 @@ class AliOssAdapter implements FilesystemAdapter
                 }
             }
             foreach ($listObjectInfo->getObjectList() as $object) {
-                yield [
-                    'key' => $object->getKey(),
-                    'last-modified' => $object->getLastModified(),
-                    'etag' => $object->getETag(),
-                    'type' => $object->getType(),
-                    'content-length' => $object->getSize(),
-                    'x-oss-storage-class' => $object->getStorageClass(),
-                ];
+                if ($object->getKey() === $options[OssClient::OSS_PREFIX] && $object->getSize() === 0) {
+                    continue;
+                }
+                if (substr($object->getKey(), -1) === '/') {
+                    yield [
+                        'Prefix' => $object->getKey(),
+                    ];
+                } else {
+                    yield [
+                        'key' => $object->getKey(),
+                        'last-modified' => $object->getLastModified(),
+                        'etag' => $object->getETag(),
+                        'type' => $object->getType(),
+                        'content-length' => $object->getSize(),
+                        'x-oss-storage-class' => $object->getStorageClass(),
+                    ];
+                }
             }
 
             // 没有更多结果了
@@ -510,7 +540,7 @@ class AliOssAdapter implements FilesystemAdapter
             $objectMeta = $this->client->getObjectMeta($this->bucket, $this->prefixer->prefixPath($path));
         } catch (OssException $exception) {
             throw UnableToRetrieveMetadata::create($path, $type, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToRetrieveMetadata::create($path, $type, '', $exception);
         }
         $attributes = $this->mapOssObjectMetadata($objectMeta, $path);
@@ -583,7 +613,7 @@ class AliOssAdapter implements FilesystemAdapter
             }
         } catch (OssException $exception) {
             throw UnableToWriteFile::atLocation($path, $exception->getErrorMessage(), $exception);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             throw UnableToWriteFile::atLocation($path, 'Unknown', $exception);
         }
     }
