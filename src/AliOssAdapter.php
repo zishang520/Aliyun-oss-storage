@@ -328,7 +328,7 @@ class AliOssAdapter implements FilesystemAdapter
         if ($deep === false) {
             $options[OssClient::OSS_DELIMITER] = '/';
         }
-        $listing = $this->retrievePaginatedListing($options);
+        $listing = $this->retrievePaginatedListing($options, $deep);
 
         try {
             foreach ($listing as $item) {
