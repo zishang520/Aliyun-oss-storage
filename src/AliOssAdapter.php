@@ -129,7 +129,7 @@ class AliOssAdapter implements FilesystemAdapter
         string $prefix = '',
         ?VisibilityConverter $visibility = null,
         ?MimeTypeDetector $mimeTypeDetector = null,
-        array $options = []
+        array $options = [],
     ) {
         $this->client = $client;
         $this->bucket = $bucket;
@@ -165,7 +165,7 @@ class AliOssAdapter implements FilesystemAdapter
 
             $listObjectInfo = $this->client->listObjects($this->bucket, $options + $this->options);
 
-            return !empty($listObjectInfo->getObjectList());
+            return ! empty($listObjectInfo->getObjectList());
         } catch (\Throwable $exception) {
             throw UnableToCheckDirectoryExistence::forLocation($path, $exception);
         }
@@ -225,7 +225,7 @@ class AliOssAdapter implements FilesystemAdapter
 
         $objects = $this->retrievePaginatedListing([
             OssClient::OSS_MAX_KEYS => 1000,
-            OSSClient::OSS_DELIMITER => '/',
+            OssClient::OSS_DELIMITER => '/',
             OssClient::OSS_MARKER => '',
             OssClient::OSS_PREFIX => $dirname,
         ], true);
@@ -437,7 +437,7 @@ class AliOssAdapter implements FilesystemAdapter
      *
      * @return array OSS options
      */
-    protected function getOptions(array $options = [], Config $config = null): array
+    protected function getOptions(array $options = [], ?Config $config = null): array
     {
         $headers = array_merge($this->options, $options);
 
@@ -545,14 +545,14 @@ class AliOssAdapter implements FilesystemAdapter
         }
         $attributes = $this->mapOssObjectMetadata($objectMeta, $path);
 
-        if (!$attributes instanceof FileAttributes) {
+        if (! $attributes instanceof FileAttributes) {
             throw UnableToRetrieveMetadata::create($path, $type, '');
         }
 
         return $attributes;
     }
 
-    private function mapOssObjectMetadata(array $metadata, string $path = null): StorageAttributes
+    private function mapOssObjectMetadata(array $metadata, ?string $path = null): StorageAttributes
     {
         if ($path === null) {
             $path = $this->prefixer->stripPrefix($metadata['key'] ?? $metadata['prefix']);
@@ -566,7 +566,7 @@ class AliOssAdapter implements FilesystemAdapter
         $fileSize = $metadata['content-length'] ?? $metadata['info']['download_content_length'] ?? null;
         $fileSize = $fileSize === null ? null : (int) $fileSize;
         $dateTime = $metadata['last-modified'] ?? null;
-        $lastModified = !is_null($dateTime) ? Carbon::parse($dateTime)->getTimeStamp() : null;
+        $lastModified = ! is_null($dateTime) ? Carbon::parse($dateTime)->getTimeStamp() : null;
 
         return new FileAttributes(
             $path,
@@ -599,7 +599,7 @@ class AliOssAdapter implements FilesystemAdapter
         $key = $this->prefixer->prefixPath($path);
         $options = $this->getOptions($this->options, $config);
 
-        $shouldDetermineMimetype = $body !== '' && !array_key_exists(OssClient::OSS_CONTENT_TYPE, $options);
+        $shouldDetermineMimetype = $body !== '' && ! array_key_exists(OssClient::OSS_CONTENT_TYPE, $options);
 
         if ($shouldDetermineMimetype && $mimeType = $this->mimeTypeDetector->detectMimeType($key, $body)) {
             $options[OssClient::OSS_CONTENT_TYPE] = $mimeType;

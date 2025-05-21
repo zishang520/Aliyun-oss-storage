@@ -40,7 +40,7 @@ class PortableVisibilityConverter implements VisibilityConverter
             OssClient::OSS_ACL_TYPE_PRIVATE => Visibility::PRIVATE,
             OssClient::OSS_ACL_TYPE_PUBLIC_READ => Visibility::PUBLIC,
             OssClient::OSS_ACL_TYPE_PUBLIC_READ_WRITE => Visibility::PUBLIC,
-            default => Visibility::PRIVATE
+            default => Visibility::PRIVATE,
         };
     }
 

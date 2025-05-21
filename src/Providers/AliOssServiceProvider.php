@@ -33,9 +33,9 @@ class AliOssServiceProvider extends ServiceProvider
             $adapter = new AliOssAdapter($client, $config['bucket'], $hostname, $ssl, $isCname, $epInternal, $config['prefix'] ?? '', options: $config['options'] ?? []);
 
             // symlink
-            FilesystemAdapter::macro('symlink', fn (string $symlink, string $path, array $config = []) => $adapter->symlink($symlink, $path, new Config($config)));
-            FilesystemAdapter::macro('appendFile', fn (string $path, string $file, int $position = 0, array $config = []) => $adapter->appendFile($path, $file, $position, new Config($config)));
-            FilesystemAdapter::macro('appendObject', fn (string $path, string $content, int $position = 0, array $config = []) => $adapter->appendObject($path, $content, $position, new Config($config)));
+            FilesystemAdapter::macro('symlink', fn(string $symlink, string $path, array $config = []) => $adapter->symlink($symlink, $path, new Config($config)));
+            FilesystemAdapter::macro('appendFile', fn(string $path, string $file, int $position = 0, array $config = []) => $adapter->appendFile($path, $file, $position, new Config($config)));
+            FilesystemAdapter::macro('appendObject', fn(string $path, string $content, int $position = 0, array $config = []) => $adapter->appendObject($path, $content, $position, new Config($config)));
 
             return new FilesystemAdapter(new Filesystem($adapter, $config), $adapter, $config);
         });
